@@ -91,6 +91,7 @@ def read_file(file_path):
 
     except Exception as ex:
         print("[ERROR] : {0}".format(ex))
+        raise Exception(ex) from ex
 
 
 # data를 hex로 기록한 .txt파일 생성
@@ -101,6 +102,9 @@ def create_txt_file(file_name, data):
             for i in data:
                 f.write(b' '.join(['{:02x}'.format(int(x)).upper().encode() for x in list(i)]))
                 f.write(b'\r\n')
+
+            print("[생성 완료] {}".format(file_name))
+
     except Exception as e:
         print(e)
 
@@ -109,24 +113,33 @@ def create_txt_file(file_name, data):
 
 # hex file 만들기
 def make_hex_file(file_path):
-    data_list = read_file(file_path)
-    # file_path에서 파일이름만 추출하여 매개변수로 넘겨줌
-    create_txt_file(basename(file_path)[:-4] + ".txt", data_list)
+    try:
+        data_list = read_file(file_path)
+        # file_path에서 파일이름만 추출하여 매개변수로 넘겨줌
+        create_txt_file(basename(file_path)[:-4] + ".txt", data_list)
+    except Exception:
+        pass
+
 
 # 한 번에 여러 개의 hex file 만들기
 def make_hex_files(list_of_file_path):
     for file_path in list_of_file_path:
-        data_list = read_file(file_path)
-        create_txt_file(basename(file_path)[:-4] + ".txt", data_list)
+        try:
+            data_list = read_file(file_path)
+            create_txt_file(basename(file_path)[:-4] + ".txt", data_list)
+        except Exception:
+            pass
 
 
 # 여러개의 hex file들을 이미지로 변환
 def make_img_files(list_of_file_path):
     for file_path in list_of_file_path:
-        data_list = read_file(file_path)
-        print(basename(file_path)[:-4] + ".txt")
-        f = create_txt_file(basename(file_path)[:-4] + ".txt", data_list)
-        bytes2png(f, 256)
+        try:
+            data_list = read_file(file_path)
+            f = create_txt_file(basename(file_path)[:-4] + ".txt", data_list)
+            bytes2png(f, 256)
+        except Exception:
+            pass
 
 
 # 하위 경로에서 file_ext 확장자를 가진 모든 파일 변환
@@ -151,13 +164,28 @@ def file_to_hex_multiprocessing(file_path, file_ext, num_of_proc):
     hex파일로 변환
     '''
     lst = []
-    # file_path 포함한, 하위 경로에 있는 파일들 모두 검색
-    for p in Path(file_path).glob("**\\*."+file_ext):
-        try:
-            if os.path.getsize(p) < (5*1024*1024):  # 5MB보다 작은 파일만 변환
-                lst.append(p)
-        except OSError as e:
-            print(e)
+
+    dir_list = []
+    black_list = ["C:\\Windows", ]  # Windows 폴더는 변환 대상에서 제외
+
+    # C:\\ 에 위치한 폴더들(black_list 제외)을 리스트에 추가
+    for p in Path(file_path).glob("*"):
+        if not(str(p) in black_list):
+            dir_list.append(p)
+            print(p)
+
+    # dir_list에 있는 폴더에 있는 파일들 모두 검색 (recursively)
+    for d in dir_list:
+        for path in Path(d).glob("**\\*."+file_ext):
+            try:
+                print(path)
+                # 5MB보다 작은 파일만 변환
+                if os.path.getsize(str(path)) < (5*1024*1024):
+                    print(path)
+                    lst.append(path)
+
+            except OSError as e:
+                print(e)
     # 멀티프로세싱을 위한 task 나누기
     task_list = chunkify(lst, num_of_proc)
 
@@ -179,7 +207,6 @@ def file_to_hex_multiprocessing(file_path, file_ext, num_of_proc):
 
     print("exe파일의 hex값 추출 완료")
 
-
     '''
     이미지로 변환
     '''
@@ -194,6 +221,7 @@ def file_to_hex_multiprocessing(file_path, file_ext, num_of_proc):
     task_list = chunkify(lst, num_of_proc)
 
     print("이미지로 변환 시작")
+    print("변환 중...")
 
     # hex파일들을 이미지로 변환한 파일 생성
     for task in task_list:
@@ -205,8 +233,6 @@ def file_to_hex_multiprocessing(file_path, file_ext, num_of_proc):
         proc.join()
 
     print("이미지 변환 완료")
-
-
 
 
 # 멀티스레딩 적용, 하지만 GIL 때문에 기본 버전과 성능이 같다.
