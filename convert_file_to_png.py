@@ -30,7 +30,6 @@ def bytes2png(f, width):
         print('Image already exists: {}'.format(image_name))
         return
 
-
     # 이미지 저장 경로 설정
     # Images 폴더가 없으면 새로 생성
     if not os.path.exists(save_dir + '\\Images'):
@@ -135,11 +134,9 @@ def make_hex_files(list_of_file_path):
 def make_img_files(list_of_file_path):
     for file_path in list_of_file_path:
         try:
-            data_list = read_file(file_path)
-            f = create_txt_file(basename(file_path)[:-4] + ".txt", data_list)
-            bytes2png(f, 256)
-        except Exception:
-            pass
+            bytes2png(file_path, 256)
+        except Exception as e:
+            raise e
 
 
 # 하위 경로에서 file_ext 확장자를 가진 모든 파일 변환
@@ -176,16 +173,19 @@ def file_to_hex_multiprocessing(file_path, file_ext, num_of_proc):
 
     # dir_list에 있는 폴더에 있는 파일들 모두 검색 (recursively)
     for d in dir_list:
-        for path in Path(d).glob("**\\*."+file_ext):
-            try:
-                print(path)
-                # 5MB보다 작은 파일만 변환
-                if os.path.getsize(str(path)) < (5*1024*1024):
-                    print(path)
-                    lst.append(path)
+        try:
+            for path in Path(d).glob("**\\*."+file_ext):
+                try:
+                    # 100KB < 파일크기 < 5MB 인 파일만 변환
+                    if (100*1024) < os.path.getsize(str(path)) < (5*1024*1024):
+                        print(path)
+                        lst.append(path)
 
-            except OSError as e:
-                print(e)
+                except OSError as e:
+                    print(e)
+
+        except FileNotFoundError as e:
+            print(e)
     # 멀티프로세싱을 위한 task 나누기
     task_list = chunkify(lst, num_of_proc)
 
@@ -215,8 +215,8 @@ def file_to_hex_multiprocessing(file_path, file_ext, num_of_proc):
     lst.clear()
     task_list.clear()
 
-    for p in Path(save_dir).glob("**\\*." + "txt"):
-        lst.append(p)
+    for p in Path(save_dir).glob("*.txt"):
+        lst.append(str(p))
     # 멀티프로세싱을 위한 task 나누기
     task_list = chunkify(lst, num_of_proc)
 

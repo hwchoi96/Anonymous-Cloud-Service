@@ -40,14 +40,14 @@ if __name__ == '__main__':
     try:
         start_time = time()
 
-        file_to_hex_multiprocessing(drive + ':\\', "exe", 5)
+        file_to_hex_multiprocessing(drive + ':\\', "exe", 4)
 
         end_time = time()
 
         print("WorkingTime : {0:0.6f} sec\n".format(end_time - start_time))
         print(end_msg)
 
-        input("Press any key to exit...")
+        input("Press Enter key to exit...")
 
     except PermissionError as e:
         print(e)
