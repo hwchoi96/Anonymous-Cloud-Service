@@ -1,0 +1,5 @@
+[client]
+database = test_db
+user = radia
+password = radia
+default-character-set = utf8
